@@ -6,39 +6,24 @@
 #include <sstream>
 #include <fstream>
 
-long long get_file_size (const char *fn)
+std::ifstream::pos_type get_file_size(const char* filename)
 {
-        FILE * file;
-        long long fsize;
-
-        file = fopen(fn, "rb");
-        if (!file)
-            return 0;
-
-        if (fseek(file, 0, SEEK_END)<0)         /* go to very last byte of file */
-                return 0;
-
-        fsize = ftell(file);
-        if (fsize == -1)
-                return 0;
-
-        fclose(file);
-
-        return fsize;
+    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+    return in.tellg(); 
 }
 std::string process_file(std::string fn){
     static const auto blocksize = 9500 * 1024;
-    std::FILE * f;
     std::vector<char> buf;
     buf.resize(blocksize);
     auto file_size = get_file_size(fn.c_str());
     if(file_size <= blocksize){
         MD4_CTX context;
         MD4_Init(&context);
-        f = std::fopen(fn.c_str(), "rb");
-        if(!f)
+        std::ifstream f(fn, std::ifstream::binary);
+        if(!f.is_open())
             return "";
-        auto length = std::fread(buf.data(), 1, buf.size(), f);
+        f.read(buf.data(), buf.size());
+        auto length = f.gcount();
         MD4_Update(&context, buf.data(), length);
         unsigned char md4[MD4_DIGEST_LENGTH];
         MD4_Final(md4, &context);
@@ -49,17 +34,17 @@ std::string process_file(std::string fn){
             out.fill('0');
             out << static_cast<int>(md4[i]);
         }
-        fclose(f);
         return out.str();
     }else{
         std::ostringstream md4_hashes;
-        f = std::fopen(fn.c_str(), "rb");
-        if(!f)
+        std::ifstream f(fn, std::ifstream::binary);
+        if(!f.is_open())
             return "";
         while(true){
             MD4_CTX context;
             MD4_Init(&context);
-            auto length = std::fread(buf.data(), 1, buf.size(), f);
+            f.read(buf.data(), buf.size());
+            auto length = f.gcount();
             if(length <= 0)
                 break;
             MD4_Update(&context, buf.data(), length);
@@ -71,7 +56,6 @@ std::string process_file(std::string fn){
             if(length < blocksize)
                 break;
         }
-        fclose(f);
         MD4_CTX context;
         MD4_Init(&context);
         auto content = md4_hashes.str();
