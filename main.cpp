@@ -111,6 +111,7 @@ int main(int argc, char* argv[]){
                 auto file_length = tmp[3];
                 auto file_name = tmp[2];
                 auto md4_hash = tmp[4];
+                boost::to_lower(md4_hash);
                 auto real_file_length = get_file_size(file_name.c_str());
                 auto correctp = false;
                 if(std::to_string(real_file_length) == file_length){
