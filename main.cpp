@@ -5,6 +5,9 @@
 #include <vector>
 #include <sstream>
 #include <fstream>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 
 std::ifstream::pos_type get_file_size(const char* filename)
 {
@@ -74,13 +77,15 @@ std::string process_file(std::string fn){
     return "";
 }
 
+std::vector<std::string> split(std::string str, std::string sep){
+    std::vector<std::string> split_vector;
+    boost::split(split_vector, str, boost::algorithm::is_any_of(sep));
+    return split_vector;
+}
+
 int main(int argc, char* argv[]){
     if(argc > 1){
-        if (std::string(argv[1]) != std::string("-c")){
-            for(int i=1;i<argc;++i){
-                std::cout << process_file(argv[i]) << " " << argv[i] << "\n";
-            }
-        }else{
+        if (std::string(argv[1]) == "-c"){
             std::ifstream fin(argv[2]);
             while(true){
                 std::string fn, ed2k_hash;
@@ -93,7 +98,38 @@ int main(int argc, char* argv[]){
                 else
                     std::cout << fn << ": FAILED\n";
             }
+            return 0;
         }
+        if (std::string(argv[1]) == "-e"){
+            std::ifstream fin(argv[2]);
+            while(true){
+                std::string ed2k_link;
+                fin >> ed2k_link;
+                if(ed2k_link.length() == 0)
+                    break;
+                auto tmp = split(ed2k_link, "|");
+                auto file_length = tmp[3];
+                auto file_name = tmp[2];
+                auto md4_hash = tmp[4];
+                auto real_file_length = get_file_size(file_name.c_str());
+                auto correctp = false;
+                if(std::to_string(real_file_length) == file_length){
+                    auto file_hash = process_file(file_name);
+                    if(file_hash == md4_hash){
+                        correctp = true;
+                    }
+                }
+                if(correctp)
+                    std::cout << file_name << ": OK\n";
+                else
+                    std::cout << file_name << ": FAILED\n";
+            }
+            return 0;
+        }
+        for(int i=1;i<argc;++i){
+            std::cout << process_file(argv[i]) << " " << argv[i] << "\n";
+        }
+        return 0;
     }
     return 0;
 }
