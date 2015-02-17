@@ -8,25 +8,58 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/assert.hpp>
 
 std::ifstream::pos_type get_file_size(const char* filename)
 {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
     return in.tellg(); 
 }
+class File{
+    FILE * file;
+public:
+    File(std::string const & filename):file(fopen(filename.c_str(), "rb")){
+    }
+    operator bool() const{
+        return file != nullptr;
+    }
+    long long read(std::vector<char> & buf, long long size){
+        if(file == nullptr)
+            return 0;
+        long long blocksize = 32768;
+        if(blocksize > size)
+            blocksize = size;
+        if(size > static_cast<long long>(buf.size()))
+            buf.resize(size);
+        long long base = 0;
+        while(size){
+            auto need_read = std::min(blocksize, size);
+            BOOST_ASSERT_MSG(need_read + base <= static_cast<long long>(buf.size()), "buf overflow!");
+            long long read_size = fread(buf.data() + base, sizeof(char), need_read, file);
+            base += read_size;
+            size -= read_size;
+            if(read_size < blocksize)
+                break;
+        }
+        return base;
+    }
+    ~File(){
+        if(!file)
+            fclose(file);
+    }
+};
+
 std::string process_file(std::string fn){
     static const auto blocksize = 9500 * 1024;
     std::vector<char> buf;
-    buf.resize(blocksize);
     auto file_size = get_file_size(fn.c_str());
     if(file_size <= blocksize){
         MD4_CTX context;
         MD4_Init(&context);
-        std::ifstream f(fn, std::ifstream::binary);
-        if(!f.is_open())
+        File f(fn);
+        if(!f)
             return "";
-        f.read(buf.data(), buf.size());
-        auto length = f.gcount();
+        auto length = f.read(buf, blocksize);
         MD4_Update(&context, buf.data(), length);
         unsigned char md4[MD4_DIGEST_LENGTH];
         MD4_Final(md4, &context);
@@ -40,14 +73,13 @@ std::string process_file(std::string fn){
         return out.str();
     }else{
         std::ostringstream md4_hashes;
-        std::ifstream f(fn, std::ifstream::binary);
-        if(!f.is_open())
+        File f(fn);
+        if(!f)
             return "";
         while(true){
             MD4_CTX context;
             MD4_Init(&context);
-            f.read(buf.data(), buf.size());
-            auto length = f.gcount();
+            auto length = f.read(buf, blocksize);
             if(length <= 0)
                 break;
             MD4_Update(&context, buf.data(), length);
