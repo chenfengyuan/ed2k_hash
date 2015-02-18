@@ -12,4 +12,10 @@ macx{
 }
 linux{
     QMAKE_LIBS += -lcrypto
+contains(QMAKE_HOST.arch, armv6l){
+        linux-g++{
+                QT -= core gui
+                QMAKE_CXXFLAGS += -std=c++11
+                QMAKE_LIBS += -lcrypto
+        }
 }
