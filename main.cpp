@@ -9,6 +9,9 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/assert.hpp>
+#include <fcntl.h>
+#include <unistd.h>
+#define _FILE_OFFSET_BITS 64
 
 std::ifstream::pos_type get_file_size(const char* filename)
 {
@@ -16,15 +19,18 @@ std::ifstream::pos_type get_file_size(const char* filename)
     return in.tellg(); 
 }
 class File{
-    FILE * file;
+    int fd;
 public:
-    File(std::string const & filename):file(fopen(filename.c_str(), "rb")){
+    File(std::string const & filename):fd(open(filename.c_str(), O_RDONLY)){
+#if _XOPEN_SOURCE >= 600 || _POSIX_C_SOURCE >= 200112L
+        posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+#endif
     }
     operator bool() const{
-        return file != nullptr;
+        return fd != -1;
     }
     long long read(std::vector<char> & buf, long long size){
-        if(file == nullptr)
+        if(fd == -1)
             return 0;
         long long blocksize = 32768;
         if(blocksize > size)
@@ -35,7 +41,7 @@ public:
         while(size){
             auto need_read = std::min(blocksize, size);
             BOOST_ASSERT_MSG(need_read + base <= static_cast<long long>(buf.size()), "buf overflow!");
-            long long read_size = fread(buf.data() + base, sizeof(char), need_read, file);
+            long long read_size = ::read(fd, buf.data() + base, need_read);
             base += read_size;
             size -= read_size;
             if(read_size < blocksize)
@@ -44,8 +50,8 @@ public:
         return base;
     }
     ~File(){
-        if(!file)
-            fclose(file);
+        if(fd != -1)
+            close(fd);
     }
 };
 
