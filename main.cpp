@@ -32,7 +32,7 @@ public:
     long long read(std::vector<char> & buf, long long size){
         if(fd == -1)
             return 0;
-        long long blocksize = 32768;
+        long long blocksize = 128 * 1024;
         if(blocksize > size)
             blocksize = size;
         if(size > static_cast<long long>(buf.size()))
