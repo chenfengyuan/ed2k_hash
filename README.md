@@ -11,3 +11,5 @@ Run
 `$ ed2k_hash files`
 
 `$ ed2k_hash -c CHECKSUM`
+
+`$ ed2k_hash -e ED2K_LINE_FILE`
