@@ -1,3 +1,4 @@
+#define _FILE_OFFSET_BITS 64
 #include <string>
 #include <iostream>
 #include <openssl/md4.h>
@@ -11,7 +12,6 @@
 #include <boost/assert.hpp>
 #include <fcntl.h>
 #include <unistd.h>
-#define _FILE_OFFSET_BITS 64
 
 std::ifstream::pos_type get_file_size(const char* filename)
 {
