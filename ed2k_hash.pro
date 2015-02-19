@@ -12,6 +12,7 @@ macx{
 }
 linux{
     QMAKE_LIBS += -lcrypto
+}
 contains(QMAKE_HOST.arch, armv6l){
         linux-g++{
                 QT -= core gui

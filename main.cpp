@@ -20,6 +20,19 @@ std::ifstream::pos_type get_file_size(const char* filename)
 }
 class File{
     int fd;
+    long long xread(int fd, void *buf, size_t len)
+    {
+        const static long long MAX_IO_SIZE = 8 * 1024 * 1024;
+        ssize_t nr;
+        if (len > MAX_IO_SIZE)
+            len = MAX_IO_SIZE;
+        while (true) {
+            nr = ::read(fd, buf, len);
+            if ((nr < 0) && (errno == EAGAIN || errno == EINTR))
+                continue;
+            return nr;
+        }
+    }
 public:
     File(std::string const & filename):fd(open(filename.c_str(), O_RDONLY)){
 #if _XOPEN_SOURCE >= 600 || _POSIX_C_SOURCE >= 200112L
@@ -41,11 +54,13 @@ public:
         while(size){
             auto need_read = std::min(blocksize, size);
             BOOST_ASSERT_MSG(need_read + base <= static_cast<long long>(buf.size()), "buf overflow!");
-            long long read_size = ::read(fd, buf.data() + base, need_read);
+            long long read_size = xread(fd, buf.data() + base, need_read);
+            if(read_size == 0)
+                break;
+            if(read_size == -1)
+                return 0;
             base += read_size;
             size -= read_size;
-            if(read_size < blocksize)
-                break;
         }
         return base;
     }
