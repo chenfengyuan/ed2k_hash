@@ -23,7 +23,7 @@ class File{
     long long xread(int fd, void *buf, size_t len)
     {
         const static long long MAX_IO_SIZE = 8 * 1024 * 1024;
-        ssize_t nr;
+        long long nr;
         if (len > MAX_IO_SIZE)
             len = MAX_IO_SIZE;
         while (true) {
